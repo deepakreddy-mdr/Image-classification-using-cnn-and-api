@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Vision | CNN + Gemini</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Outfit', sans-serif; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .loader {
+            border-top-color: #3B82F6;
+            -webkit-animation: spinner 1.5s linear infinite;
+            animation: spinner 1.5s linear infinite;
+        }
+        @keyframes spinner {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 min-h-screen text-slate-800 flex flex-col items-center justify-center p-4">
+
+    <!-- Main Container -->
+    <div class="w-full max-w-4xl animate-fade-in">
+        
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center p-3 bg-blue-500/20 rounded-2xl mb-4 backdrop-blur-sm border border-blue-400/30">
+                <i class="fa-solid fa-brain text-blue-300 text-2xl mr-3"></i>
+                <h1 class="text-3xl font-bold text-white tracking-tight">AI Vision Dual-Core</h1>
+            </div>
+            <p class="text-blue-200">Hybrid Classification System: CNN Model + Google Gemini</p>
+        </div>
+
+        {% if error %}
+        <div class="bg-red-500/10 border border-red-500/50 text-red-200 px-4 py-3 rounded-xl mb-6 text-center backdrop-blur-md">
+            <i class="fa-solid fa-circle-exclamation mr-2"></i> {{ error }}
+        </div>
+        {% endif %}
+
+        {% if cnn_result %}
+        <!-- RESULTS VIEW -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- CNN Result Card -->
+            <div class="glass-panel rounded-3xl p-8 shadow-2xl shadow-blue-900/50 relative overflow-hidden group">
+                <div class="absolute top-0 left-0 w-2 h-full bg-blue-500"></div>
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-slate-800"><i class="fa-solid fa-layer-group text-blue-500 mr-2"></i>CNN Model</h2>
+                    <span class="bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Local Model</span>
+                </div>
+                
+                <div class="flex flex-col items-center justify-center py-6">
+                    <div class="text-5xl font-bold text-slate-800 mb-2">{{ cnn_result }}</div>
+                    <div class="text-sm text-slate-500 uppercase tracking-widest font-semibold">Predicted Class</div>
+                </div>
+
+                <div class="mt-6">
+                    <div class="flex justify-between text-sm font-semibold mb-2">
+                        <span>Confidence Score</span>
+                        <span class="text-blue-600">{{ confidence }}%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                        <div class="bg-gradient-to-r from-blue-400 to-blue-600 h-3 rounded-full transition-all duration-1000 ease-out" style="width: 0%" id="progress-bar"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gemini Result Card -->
+            <div class="glass-panel rounded-3xl p-8 shadow-2xl shadow-blue-900/50 relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-2 h-full bg-purple-500"></div>
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-slate-800"><i class="fa-solid fa-wand-magic-sparkles text-purple-500 mr-2"></i>Gemini AI</h2>
+                    <span class="bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Cloud API</span>
+                </div>
+
+                <div class="flex flex-col items-center justify-center py-6 h-full">
+                    <div class="text-4xl font-bold text-purple-900 mb-2 text-center">{{ gemini_result }}</div>
+                    <div class="text-sm text-slate-500 uppercase tracking-widest font-semibold">LLM Verification</div>
+                </div>
+                
+                <div class="mt-4 p-4 bg-purple-50 rounded-xl border border-purple-100 text-center">
+                    <p class="text-sm text-purple-800">
+                        {% if cnn_result|lower == gemini_result|lower %}
+                            <i class="fa-solid fa-check-circle text-green-500 mr-1"></i> Models Agree
+                        {% else %}
+                            <i class="fa-solid fa-triangle-exclamation text-amber-500 mr-1"></i> Model Divergence
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="mt-8 text-center">
+            <a href="/" class="inline-flex items-center justify-center px-8 py-3 text-base font-medium text-white bg-slate-800 hover:bg-slate-700 rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1">
+                <i class="fa-solid fa-arrow-rotate-left mr-2"></i> Analyze Another Image
+            </a>
+        </div>
+
+        <script>
+            // Simple animation for the progress bar on load
+            setTimeout(() => {
+                const bar = document.getElementById('progress-bar');
+                if(bar) bar.style.width = "{{ confidence }}%";
+            }, 300);
+        </script>
+
+        {% else %}
+        <!-- UPLOAD VIEW -->
+        <div class="glass-panel rounded-3xl p-10 shadow-2xl max-w-2xl mx-auto">
+            <form action="/" method="POST" enctype="multipart/form-data" id="upload-form">
+                
+                <div class="mb-8 text-center">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-2">Upload Image</h2>
+                    <p class="text-slate-500">Supported formats: JPG, PNG, JPEG</p>
+                </div>
+
+                <!-- Drop Zone -->
+                <div class="relative border-2 border-dashed border-slate-300 rounded-2xl p-10 transition-all hover:border-blue-400 hover:bg-blue-50/50 group text-center cursor-pointer" id="drop-zone">
+                    <input type="file" name="image" id="file-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="image/*" required onchange="previewImage(this)">
+                    
+                    <div id="preview-container" class="hidden mb-4 relative">
+                        <img id="preview-img" src="#" alt="Preview" class="mx-auto max-h-64 rounded-lg shadow-md object-contain">
+                        <button type="button" onclick="resetForm(event)" class="absolute top-0 right-0 -mr-2 -mt-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors">
+                            <i class="fa-solid fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div id="upload-placeholder" class="pointer-events-none">
+                        <div class="w-20 h-20 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                            <i class="fa-solid fa-cloud-arrow-up text-3xl"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-slate-700">Click to upload or drag and drop</h3>
+                        <p class="text-slate-400 text-sm mt-2">Maximum file size 10MB</p>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="submit-btn" class="w-full mt-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span id="btn-text">Run Analysis</span>
+                    <div id="btn-loader" class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-6 w-6 mx-auto hidden"></div>
+                </button>
+            </form>
+        </div>
+        
+        <script>
+            function previewImage(input) {
+                if (input.files && input.files[0]) {
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        document.getElementById('preview-img').src = e.target.result;
+                        document.getElementById('preview-container').classList.remove('hidden');
+                        document.getElementById('upload-placeholder').classList.add('hidden');
+                    }
+                    reader.readAsDataURL(input.files[0]);
+                }
+            }
+
+            function resetForm(e) {
+                e.preventDefault();
+                document.getElementById('file-input').value = "";
+                document.getElementById('preview-container').classList.add('hidden');
+                document.getElementById('upload-placeholder').classList.remove('hidden');
+            }
+
+            document.getElementById('upload-form').addEventListener('submit', function() {
+                const btn = document.getElementById('submit-btn');
+                const text = document.getElementById('btn-text');
+                const loader = document.getElementById('btn-loader');
+                
+                btn.disabled = true;
+                text.classList.add('hidden');
+                loader.classList.remove('hidden');
+            });
+        </script>
+        {% endif %}
+
+        <div class="mt-12 text-center text-blue-200/40 text-sm">
+            <p>Powered by TensorFlow & Google Gemini 2.5 Flash</p>
+        </div>
+    </div>
+</body>
+</html>
